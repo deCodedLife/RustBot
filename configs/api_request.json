@@ -1,0 +1,31 @@
+{
+  "messenger": "telegram",
+  "user_id": "12412412412",
+  "message": "Hello world",
+  "buttons": [
+    {
+      "title": "Да",
+      "reply": "Yes"
+    },
+    {
+      "title": "Нет",
+      "reply": "No"
+    }
+  ],
+  "handlers": {
+    "yes": {
+      "object": "visits",
+      "command": "update",
+      "data": {
+        "comment": "Придёт"
+      }
+    },
+    "no": {
+      "object": "visits",
+      "command": "update",
+      "data": {
+        "comment": "Не придёт"
+      }
+    }
+  }
+}

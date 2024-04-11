@@ -1,0 +1,6 @@
+/target
+/configs
+
+/src/tests/sense_data.rs
+*.session
+Cargo.toml
