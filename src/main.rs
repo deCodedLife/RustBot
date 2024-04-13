@@ -1,7 +1,8 @@
 use std::pin::pin;
+use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
-use actix_web::{App, HttpServer};
+use actix_web::{App, HttpServer, web};
 use futures_util::future::{Either, select};
 use futures_util::TryFutureExt;
 use grammers_client::{InputMessage, Update};
@@ -13,7 +14,9 @@ use tokio::{runtime, task};
 // mod bot;
 
 use crate::bot::{BotChat, DocaBot};
+use crate::bot::telegram::TelegramBot;
 use crate::structs::*;
+use crate::structs::api::BotRequest;
 use crate::utils::JsonConfigs;
 
 pub mod structs;
@@ -61,12 +64,16 @@ async fn echo_messages<T: bot::DocaBot>(bot: T) -> Result {
             Update::NewMessage(message) if !message.outgoing() => {
                 match message.chat().pack().ty {
                     PackedType::User => {
-                        let chat = BotChat{
-                            chat_id: None,
-                            title: None,
-                            tg_chat: Option::from( PackedChat::from( message.chat() ) )
-                        };
-                        bot.send_message( &chat, "Пользователь сейчас занят разработкой бота)" ).await?;
+                        let chat = Option::from( PackedChat::from( message.chat() ) );
+                        if message.text() != "Пользователь сейчас занят разработкой бота)" {
+                            bot.send_message( &BotRequest {
+                                messenger: String::from("Telegram"),
+                                user: chat.unwrap().id.to_string(),
+                                message: String::from("Пользователь сейчас занят разработкой бота)"),
+                                buttons: None,
+                                handlers: None
+                            } ).await?;
+                        }
                     },
                     _ => {}
                 }
@@ -78,7 +85,7 @@ async fn echo_messages<T: bot::DocaBot>(bot: T) -> Result {
 }
 
 
-async fn async_main() {
+async fn async_main() -> std::io::Result<()> {
 
     let bot_config = bot::BotAuth::from_file("configs/app_configs.json");
     let user_data = auth::AuthData::from_file("configs/user_config.json");
@@ -87,14 +94,14 @@ async fn async_main() {
     bot.sign_in(user_data).await.unwrap();
     actix_rt::spawn( echo_messages(bot.clone()).into_future() );
 
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         App::new()
+            .app_data(web::Data::new(bot.clone()))
             .service(api::send_message)
     })
-        .bind(("127.0.0.1", 8081)).unwrap()
+        .bind(("127.0.0.1", 8081))?
         .run()
         .await
-        .unwrap()
 }
 
 fn main() {
@@ -111,5 +118,5 @@ fn main() {
             .thread_name( "actix" )
             .build()
             .unwrap()
-    } ).block_on(async_main());
+    } ).block_on(async_main()).unwrap();
 }

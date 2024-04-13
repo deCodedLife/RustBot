@@ -8,6 +8,7 @@ use grammers_tl_types::types::InputPeerNotifySettings;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use crate::structs::*;
+use crate::structs::api::BotRequest;
 use crate::utils;
 use crate::utils::JsonConfigs;
 
@@ -68,6 +69,6 @@ pub trait DocaBot {
     async fn sign_out(&self);
     async fn get_dialogs(&self) -> utils::Result<Vec<BotChat>>;
     async fn get_contacts(&self) -> utils::Result<Vec<BotContact>>;
-    async fn send_message(&self, chat: &BotChat, message: &str) -> utils::Result<()>;
+    async fn send_message(&self, data: &BotRequest) -> utils::Result<()>;
     async fn get_updates(&self) -> Result<Option<Update>, InvocationError>;
 }

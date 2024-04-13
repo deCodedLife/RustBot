@@ -12,10 +12,11 @@ use serde_json::Value;
 use crate::bot::{BotAuth, BotChat, BotContact, DocaBot};
 use crate::structs::auth::AuthData;
 use crate::{SESSION_FILE, utils};
+use crate::structs::api::BotRequest;
 
 #[derive(Clone)]
 pub struct TelegramBot {
-    client: Client
+    pub client: Client
 }
 
 impl TelegramBot {
@@ -105,8 +106,16 @@ impl DocaBot for TelegramBot {
         Ok(contacts)
     }
 
-    async fn send_message(&self, chat: &BotChat, message: &str) -> utils::Result<()> {
-        self.client.send_message(chat.tg_chat.unwrap(), InputMessage::from( message ) ).await?;
+    async fn send_message(&self, data: &BotRequest) -> utils::Result<()> {
+        let message = InputMessage::from(data.message.as_str());
+        if data.buttons.is_some() {
+            // TODO
+        }
+        self.client.send_message(PackedChat{
+            id: data.user.parse::<i64>().unwrap(),
+            ty: PackedType::User,
+            access_hash: None
+        }, message ).await?;
         Ok(())
     }
 
