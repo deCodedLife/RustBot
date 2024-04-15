@@ -1,9 +1,7 @@
 use std::future::IntoFuture;
 use std::ops::Deref;
 use std::pin::pin;
-use std::sync::Arc;
-use actix_web::{App, HttpServer, web};
-use actix_web::web::to;
+use actix_web::{App, HttpServer, web};;
 use futures_util::future::{Either, select};
 use grammers_client::{Update};
 use grammers_session::{PackedChat, PackedType};
@@ -13,7 +11,7 @@ use tokio::sync::mpsc::Receiver;
 use crate::bot::{DocaBot};
 use crate::bot::telegram::TelegramBot;
 use crate::structs::*;
-use crate::structs::api::{AppData, ChannelData, ReceivedMessage, UserHandler, UserHandlers};
+use crate::structs::api::{AppData, ChannelData, ReceivedMessage};
 use crate::utils::JsonConfigs;
 
 pub mod structs;
@@ -45,7 +43,6 @@ async fn get_updates(bot: TelegramBot, tx: tokio::sync::mpsc::Sender<ChannelData
         let update = {
             let exit = pin!(async { tokio::signal::ctrl_c().await });
             let upd = pin!(async { bot.get_updates().await });
-
             match select(exit, upd).await {
                 Either::Left(_) => None,
                 Either::Right((u, _)) => Some(u),
@@ -76,15 +73,14 @@ async fn get_updates(bot: TelegramBot, tx: tokio::sync::mpsc::Sender<ChannelData
 
 async fn handle_messages(mut bot: TelegramBot, mut bot_rx: Receiver<ChannelData>, ) -> utils::Result<()> {
     loop {
-        match bot_rx.recv().await {
-            Some(data) => {
-                match data {
-                    ChannelData::Handler(data) => bot.add_handler(data.user, data.handler),
-                    ChannelData::Message(data) => bot.handle_message(data.user, data.message).await.unwrap()
-                };
-            }
-            _ => {}
+        let data = bot_rx.recv().await;
+        if data.is_none() {
+            continue
         }
+        match data.unwrap() {
+            ChannelData::Handler(data) => bot.add_handler(data.user, data.handler),
+            ChannelData::Message(data) => bot.handle_message(data.user, data.message).await.unwrap()
+        };
         println!("done?");
     }
 }
@@ -95,6 +91,7 @@ async fn async_main() -> std::io::Result<()> {
     let user_data = auth::AuthData::from_file("configs/user_config.json");
     let bot = bot::telegram::TelegramBot::new(bot_config).await;
     bot.sign_in(user_data).await.unwrap();
+
     let (bot_tx, mut bot_rx) = tokio::sync::mpsc::channel::<ChannelData>(1024);
     actix_rt::spawn(get_updates(bot.clone(), bot_tx.clone()).into_future());
     actix_rt::spawn(handle_messages(bot.clone(), bot_rx).into_future().into_future());

@@ -107,10 +107,10 @@ impl DocaBot for TelegramBot {
         let mut test_import = Vec::new();
         test_import.push( InputContact::InputPhoneContact(
             InputPhoneContact{
-                last_name: "Test".to_string(),
-                first_name: "Test".to_string(),
+                last_name: data.last_name,
+                first_name: data.first_name,
                 client_id: 0,
-                phone: "+79786588286".to_string()
+                phone: data.phone
             }
         ) );
         match self.client.invoke(&grammers_tl_types::functions::contacts::ImportContacts {

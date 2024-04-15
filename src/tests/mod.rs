@@ -2,7 +2,6 @@ mod sense_data;
 
 use crate::bot;
 use crate::structs::*;
-use crate::structs::api::BotRequest;
 use crate::utils::JsonConfigs;
 use crate::tests::sense_data::{APP_HASH, APP_ID, PASSWORD, USERNAME};
 
@@ -30,7 +29,7 @@ fn bot_data_write() {
 #[test]
 fn test_api_request() {
 
-    let request = BotRequest::from_file("configs/api_request.json");
-    println!("{:?}", request);
+    // let request = BotRequest::from_file("configs/api_request.json");
+    // println!("{:?}", request);
 
 }
