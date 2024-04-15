@@ -1,39 +1,22 @@
-use std::ops::Deref;
 use grammers_client::{Client, Config, InputMessage, SignInError, Update};
-use grammers_client::client::dialogs;
-use grammers_client::types::Chat::Channel;
 use grammers_mtsender::InvocationError;
 use grammers_session::{PackedChat, PackedType, Session};
-use grammers_tl_types::enums::{Chat, InputPeer};
+use grammers_tl_types::enums::{Chat, InputContact};
 use grammers_tl_types::Serializable;
-use grammers_tl_types::serialize::Buffer;
+use grammers_tl_types::types::InputPhoneContact;
 use serde::Serialize;
-use serde_json::Value;
 use crate::bot::{BotAuth, BotChat, BotContact, DocaBot};
 use crate::structs::auth::AuthData;
 use crate::{SESSION_FILE, utils};
-use crate::structs::api::BotRequest;
+use crate::structs::api::{AddContactRequest, SendMessageRequest, BotHandler, UserHandlers};
 
 #[derive(Clone)]
 pub struct TelegramBot {
-    pub client: Client
+    pub client: Client,
+    pub handlers: UserHandlers
 }
 
 impl TelegramBot {
-    async fn import_contact() {
-        // let mut test_import = Vec::new();
-        // test_import.push( InputContact::InputPhoneContact(
-        //     InputPhoneContact{
-        //         last_name: "Test".to_string(),
-        //         first_name: "Test".to_string(),
-        //         client_id: 0,
-        //         phone: "+79786588286".to_string()
-        //     }
-        // ) );
-        // client.invoke(&grammers_tl_types::functions::contacts::ImportContacts {
-        //     contacts: test_import
-        // }).await?;
-    }
 }
 
 impl DocaBot for TelegramBot {
@@ -47,12 +30,15 @@ impl DocaBot for TelegramBot {
             api_hash: cfg.app_hash.clone(),
             params: Default::default(),
         }).await.unwrap();
-        TelegramBot { client }
+        TelegramBot { client, handlers: Default::default() }
+    }
+
+    fn add_handler(&mut self, user: String, handler: BotHandler) {
+        self.handlers.insert(user, handler);
     }
 
     async fn sign_in(&self, data: AuthData) -> utils::Result<()> {
         if self.client.is_authorized().await? { return Ok(()); }
-
         println!("Signing in...");
         let token = self.client.request_login_code(&data.username).await?;
         let signed_in = self.client.sign_in(&token, &data.verify_code).await;
@@ -65,7 +51,6 @@ impl DocaBot for TelegramBot {
             Ok(_) => (),
             Err(e) => panic!("{}", e),
         };
-
         println!("Signed in!");
         match self.client.session().save_to_file(SESSION_FILE) {
             Ok(_) => {}
@@ -76,7 +61,6 @@ impl DocaBot for TelegramBot {
                 );
             }
         }
-
         Ok(())
     }
 
@@ -106,7 +90,7 @@ impl DocaBot for TelegramBot {
         Ok(contacts)
     }
 
-    async fn send_message(&self, data: &BotRequest) -> utils::Result<()> {
+    async fn send_message(&self, data: SendMessageRequest) -> utils::Result<()> {
         let message = InputMessage::from(data.message.as_str());
         if data.buttons.is_some() {
             // TODO
@@ -119,7 +103,53 @@ impl DocaBot for TelegramBot {
         Ok(())
     }
 
+    async fn add_contact(&self, data: AddContactRequest) -> utils::Result<i64> {
+        let mut test_import = Vec::new();
+        test_import.push( InputContact::InputPhoneContact(
+            InputPhoneContact{
+                last_name: "Test".to_string(),
+                first_name: "Test".to_string(),
+                client_id: 0,
+                phone: "+79786588286".to_string()
+            }
+        ) );
+        match self.client.invoke(&grammers_tl_types::functions::contacts::ImportContacts {
+            contacts: test_import
+        }).await {
+            Ok(grammers_tl_types::enums::contacts::ImportedContacts::Contacts(data)) => {
+                let imported_contact = data.imported.first().unwrap();
+                match imported_contact {
+                    grammers_tl_types::enums::ImportedContact::Contact(data) => Ok(data.user_id),
+                    _ => Ok(0)
+                }
+            },
+            Err(e) => {
+                println!("{:?}", e);
+                Ok(0)
+            }
+        }
+    }
+
     async fn get_updates(&self) -> Result<Option<Update>, InvocationError> {
         Ok(self.client.next_update().await?)
+    }
+
+    async fn handle_message(&self, user: String, message: String) -> utils::Result<()> {
+        let handlers = self.handlers.get(&user);
+        if handlers.is_none() {
+            return Ok(());
+        }
+        let handler = handlers.unwrap().get(&message);
+        if handler.is_none() {
+            return Ok(());
+        }
+        let request = handler.unwrap();
+        reqwest::Client::new()
+            .post(request.api_url.as_str())
+            .body(serde_json::to_string(request).unwrap())
+            .send()
+            .await.unwrap();
+        Ok(())
+
     }
 }

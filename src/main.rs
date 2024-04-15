@@ -1,22 +1,19 @@
+use std::future::IntoFuture;
+use std::ops::Deref;
 use std::pin::pin;
-use std::sync::{Arc, Mutex};
-use std::thread::sleep;
-use std::time::Duration;
+use std::sync::Arc;
 use actix_web::{App, HttpServer, web};
+use actix_web::web::to;
 use futures_util::future::{Either, select};
-use futures_util::TryFutureExt;
-use grammers_client::{InputMessage, Update};
+use grammers_client::{Update};
 use grammers_session::{PackedChat, PackedType};
-use grammers_tl_types::enums::SecureValue::Value;
-// use std::io;
 use simple_logger::SimpleLogger;
-use tokio::{runtime, task};
-// mod bot;
+use tokio::sync::mpsc::Receiver;
 
-use crate::bot::{BotChat, DocaBot};
+use crate::bot::{DocaBot};
 use crate::bot::telegram::TelegramBot;
 use crate::structs::*;
-use crate::structs::api::BotRequest;
+use crate::structs::api::{AppData, ChannelData, ReceivedMessage, UserHandler, UserHandlers};
 use crate::utils::JsonConfigs;
 
 pub mod structs;
@@ -42,8 +39,8 @@ const SESSION_FILE: &str = "dialogs.session";
 //     stdin.read_line(&mut line)?;
 //     Ok(line)
 // }
-type Result = std::result::Result<(), Box<dyn std::error::Error>>;
-async fn echo_messages<T: bot::DocaBot>(bot: T) -> Result {
+
+async fn get_updates(bot: TelegramBot, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()> {
     loop {
         let update = {
             let exit = pin!(async { tokio::signal::ctrl_c().await });
@@ -54,26 +51,20 @@ async fn echo_messages<T: bot::DocaBot>(bot: T) -> Result {
                 Either::Right((u, _)) => Some(u),
             }
         };
-
         let update = match update {
-            None | Some(Ok(None)) => break,
-            Some(u) => u?.unwrap(),
-        };
-
+            None | Some(Ok(None)) => continue,
+            Some(u) => u?,
+        }.unwrap();
         match update {
             Update::NewMessage(message) if !message.outgoing() => {
                 match message.chat().pack().ty {
                     PackedType::User => {
                         let chat = Option::from( PackedChat::from( message.chat() ) );
-                        if message.text() != "Пользователь сейчас занят разработкой бота)" {
-                            bot.send_message( &BotRequest {
-                                messenger: String::from("Telegram"),
-                                user: chat.unwrap().id.to_string(),
-                                message: String::from("Пользователь сейчас занят разработкой бота)"),
-                                buttons: None,
-                                handlers: None
-                            } ).await?;
-                        }
+                        let message = ReceivedMessage {
+                            user: chat.unwrap().id.to_string(),
+                            message: String::from(message.text())
+                        };
+                        tx.send(ChannelData::Message(message)).await.unwrap();
                     },
                     _ => {}
                 }
@@ -81,22 +72,40 @@ async fn echo_messages<T: bot::DocaBot>(bot: T) -> Result {
             _ => {}
         }
     }
-    Ok(())
+}
+
+async fn handle_messages(mut bot: TelegramBot, mut bot_rx: Receiver<ChannelData>, ) -> utils::Result<()> {
+    loop {
+        match bot_rx.recv().await {
+            Some(data) => {
+                match data {
+                    ChannelData::Handler(data) => bot.add_handler(data.user, data.handler),
+                    ChannelData::Message(data) => bot.handle_message(data.user, data.message).await.unwrap()
+                };
+            }
+            _ => {}
+        }
+        println!("done?");
+    }
 }
 
 
 async fn async_main() -> std::io::Result<()> {
-
     let bot_config = bot::BotAuth::from_file("configs/app_configs.json");
     let user_data = auth::AuthData::from_file("configs/user_config.json");
-
-    let mut bot = bot::telegram::TelegramBot::new(bot_config).await;
+    let bot = bot::telegram::TelegramBot::new(bot_config).await;
     bot.sign_in(user_data).await.unwrap();
-    actix_rt::spawn( echo_messages(bot.clone()).into_future() );
+    let (bot_tx, mut bot_rx) = tokio::sync::mpsc::channel::<ChannelData>(1024);
+    actix_rt::spawn(get_updates(bot.clone(), bot_tx.clone()).into_future());
+    actix_rt::spawn(handle_messages(bot.clone(), bot_rx).into_future().into_future());
 
     HttpServer::new(move || {
+        let app_data = AppData {
+            bot: bot.clone(),
+            tx: bot_tx.clone()
+        };
         App::new()
-            .app_data(web::Data::new(bot.clone()))
+            .app_data(web::Data::new(app_data))
             .service(api::send_message)
     })
         .bind(("127.0.0.1", 8081))?
@@ -105,7 +114,6 @@ async fn async_main() -> std::io::Result<()> {
 }
 
 fn main() {
-
     SimpleLogger::new()
         .with_level(log::LevelFilter::Debug)
         .init()

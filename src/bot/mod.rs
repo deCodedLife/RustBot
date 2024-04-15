@@ -4,40 +4,11 @@ use grammers_client::Update;
 use grammers_mtsender::InvocationError;
 use grammers_session::PackedChat;
 use grammers_tl_types::{Serializable};
-use grammers_tl_types::types::InputPeerNotifySettings;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use crate::structs::*;
-use crate::structs::api::BotRequest;
+use crate::structs::api::{AddContactRequest, BotHandler, SendMessageRequest};
 use crate::utils;
 use crate::utils::JsonConfigs;
-
-// impl crate::Serializable for InputPeerNotifySettings {
-//     fn serialize(&self, buf: crate::serialize::Buffer) {
-//         (0u32 | if self.show_previews.is_some() { 1 } else { 0 } | if self.silent.is_some() { 2 } else { 0 } | if self.mute_until.is_some() { 4 } else { 0 } | if self.sound.is_some() { 8 } else { 0 } | if self.stories_muted.is_some() { 64 } else { 0 } | if self.stories_hide_sender.is_some() { 128 } else { 0 } | if self.stories_sound.is_some() { 256 } else { 0 }).serialize(buf);
-//         if let Some(ref x) = self.show_previews {
-//             x.serialize(buf);
-//         }
-//         if let Some(ref x) = self.silent {
-//             x.serialize(buf);
-//         }
-//         if let Some(ref x) = self.mute_until {
-//             x.serialize(buf);
-//         }
-//         if let Some(ref x) = self.sound {
-//             x.serialize(buf);
-//         }
-//         if let Some(ref x) = self.stories_muted {
-//             x.serialize(buf);
-//         }
-//         if let Some(ref x) = self.stories_hide_sender {
-//             x.serialize(buf);
-//         }
-//         if let Some(ref x) = self.stories_sound {
-//             x.serialize(buf);
-//         }
-//     }
-// }
 
 
 #[derive(Default, Serialize, Deserialize)]
@@ -65,10 +36,13 @@ pub struct BotContact {
 
 pub trait DocaBot {
     async fn new(cfg: BotAuth) -> Self;
+    fn add_handler(&mut self, user: String, handler: BotHandler);
     async fn sign_in(&self, data: auth::AuthData) -> utils::Result<()>;
     async fn sign_out(&self);
     async fn get_dialogs(&self) -> utils::Result<Vec<BotChat>>;
     async fn get_contacts(&self) -> utils::Result<Vec<BotContact>>;
-    async fn send_message(&self, data: &BotRequest) -> utils::Result<()>;
+    async fn send_message(&self, data: SendMessageRequest) -> utils::Result<()>;
+    async fn add_contact(&self, data: AddContactRequest) -> utils::Result<i64>;
     async fn get_updates(&self) -> Result<Option<Update>, InvocationError>;
+    async fn handle_message(&self, user: String, message: String) -> utils::Result<()>;
 }
