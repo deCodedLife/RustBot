@@ -1,7 +1,7 @@
 use std::future::IntoFuture;
 use std::ops::Deref;
 use std::pin::pin;
-use actix_web::{App, HttpServer, web};;
+use actix_web::{App, HttpServer, web};
 use futures_util::future::{Either, select};
 use grammers_client::{Update};
 use grammers_session::{PackedChat, PackedType};
