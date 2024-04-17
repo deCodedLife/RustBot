@@ -3,13 +3,14 @@ use std::ops::Deref;
 use std::pin::pin;
 use actix_web::{App, HttpServer, web};
 use futures_util::future::{Either, select};
-use grammers_client::{Update};
+pub use grammers_client::{Update};
 use grammers_session::{PackedChat, PackedType};
 use simple_logger::SimpleLogger;
 use tokio::sync::mpsc::Receiver;
 
-use crate::bot::{DocaBot};
-use crate::bot::telegram::TelegramBot;
+
+use crate::bot::{BotAuth, DocaBot};
+use crate::bot::telegram_user::{TelegramUser, TelegramUserAuth};
 use crate::structs::*;
 use crate::structs::api::{AppData, ChannelData, ReceivedMessage};
 use crate::utils::JsonConfigs;
@@ -24,21 +25,7 @@ mod api;
 
 const SESSION_FILE: &str = "dialogs.session";
 
-// fn prompt(message: &str) -> utils::Result<String> {
-//     let stdout = io::stdout();
-//     let mut stdout = stdout.lock();
-//     stdout.write_all(message.as_bytes())?;
-//     stdout.flush()?;
-//
-//     let stdin = io::stdin();
-//     let mut stdin = stdin.lock();
-//
-//     let mut line = String::new();
-//     stdin.read_line(&mut line)?;
-//     Ok(line)
-// }
-
-async fn get_updates(bot: TelegramBot, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()> {
+async fn get_updates(bot: TelegramUser, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()> {
     loop {
         let update = {
             let exit = pin!(async { tokio::signal::ctrl_c().await });
@@ -53,10 +40,30 @@ async fn get_updates(bot: TelegramBot, tx: tokio::sync::mpsc::Sender<ChannelData
             Some(u) => u?,
         }.unwrap();
         match update {
+            Update::MessageEdited(message) => {
+                let message_ref = message.clone();
+                if message.msg.reactions.is_none() {
+                    continue;
+                }
+                let grammers_tl_types::enums::MessageReactions::Reactions(reactions) = message.msg.reactions.unwrap();
+                let user_reaction = reactions.results.first().unwrap();
+                let grammers_tl_types::enums::ReactionCount::Count(reaction_count) = user_reaction;
+                match &reaction_count.reaction {
+                    grammers_tl_types::enums::Reaction::Emoji(emoji) => {
+                        let chat = Option::from(PackedChat::from(message_ref.chat()));
+                        let message = ReceivedMessage {
+                            user: chat.unwrap().id.to_string(),
+                            message: emoji.emoticon.clone()
+                        };
+                        tx.send(ChannelData::Message(message)).await.unwrap();
+                    }
+                    _ => {}
+                }
+            }
             Update::NewMessage(message) if !message.outgoing() => {
                 match message.chat().pack().ty {
                     PackedType::User => {
-                        let chat = Option::from( PackedChat::from( message.chat() ) );
+                        let chat = Option::from(PackedChat::from( message.chat() ) );
                         let message = ReceivedMessage {
                             user: chat.unwrap().id.to_string(),
                             message: String::from(message.text())
@@ -71,7 +78,7 @@ async fn get_updates(bot: TelegramBot, tx: tokio::sync::mpsc::Sender<ChannelData
     }
 }
 
-async fn handle_messages(mut bot: TelegramBot, mut bot_rx: Receiver<ChannelData>, ) -> utils::Result<()> {
+async fn handle_messages(mut bot: TelegramUser, mut bot_rx: Receiver<ChannelData>, ) -> utils::Result<()> {
     loop {
         let data = bot_rx.recv().await;
         if data.is_none() {
@@ -79,17 +86,17 @@ async fn handle_messages(mut bot: TelegramBot, mut bot_rx: Receiver<ChannelData>
         }
         match data.unwrap() {
             ChannelData::Handler(data) => bot.add_handler(data.user, data.handler),
-            ChannelData::Message(data) => bot.handle_message(data.user, data.message).await.unwrap()
+            ChannelData::Message(data) => bot.handle_message(data.user, data.message).await.unwrap(),
+            _ => {}
         };
-        println!("done?");
     }
 }
 
 
 async fn async_main() -> std::io::Result<()> {
-    let bot_config = bot::BotAuth::from_file("configs/app_configs.json");
+    let bot_config = TelegramUserAuth::from_file("configs/app_configs.json");
     let user_data = auth::AuthData::from_file("configs/user_config.json");
-    let bot = bot::telegram::TelegramBot::new(bot_config).await;
+    let bot = bot::telegram_user::TelegramUser::new(BotAuth::TelegramUser(bot_config)).await;
     bot.sign_in(user_data).await.unwrap();
 
     let (bot_tx, mut bot_rx) = tokio::sync::mpsc::channel::<ChannelData>(1024);

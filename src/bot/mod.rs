@@ -1,22 +1,24 @@
-pub mod telegram;
+pub mod telegram_user;
+mod telegram_bot;
 
 use grammers_client::Update;
 use grammers_mtsender::InvocationError;
 use grammers_session::PackedChat;
 use grammers_tl_types::{Serializable};
 use serde::{Deserialize, Serialize};
+use crate::bot::telegram_bot::TelegramBotAuth;
+use crate::bot::telegram_user::TelegramUserAuth;
 use crate::structs::*;
 use crate::structs::api::{AddContactRequest, BotHandler, SendMessageRequest};
 use crate::utils;
 use crate::utils::JsonConfigs;
 
 
-#[derive(Default, Serialize, Deserialize)]
-pub struct BotAuth {
-    pub app_id: i32,
-    pub app_hash: String
+#[derive(PartialEq, Serialize, Deserialize)]
+pub enum  BotAuth {
+    TelegramUser(TelegramUserAuth),
+    TelegramAuth(TelegramBotAuth)
 }
-impl JsonConfigs for BotAuth{}
 
 
 #[derive(Debug)]

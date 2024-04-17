@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use crate::bot::{BotChat, DocaBot};
 use crate::structs::api::{AddContactRequest, AppData, BotRequestType, ChannelData, SendMessageRequest, UserHandler};
-use crate::bot::telegram::TelegramBot;
+use crate::bot::telegram_user::TelegramUser;
 use crate::structs::api::BotRequestType::RequestMessage;
 
 

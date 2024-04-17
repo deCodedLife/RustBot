@@ -9,12 +9,12 @@ edition = "2021"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = { version = "1.0.115" }
 
-grammers-client = "0.5.0"
-grammers-crypto = { version = "0.6.0" }
-grammers-mtproto = { version = "0.5.0" }
-grammers-mtsender = {version = "0.5.0" }
-grammers-session = { version = "0.5.1" }
-grammers-tl-types = { version = "0.5.1", features = [
+grammers-client = { path = "src/libs/grammers-client", version = "0.5.0" }
+grammers-crypto = { path = "src/libs/grammers-crypto", version = "0.6.0" }
+grammers-mtproto = { path = "src/libs/grammers-mtproto", version = "0.5.0" }
+grammers-mtsender = { path = "src/libs/grammers-mtsender", version = "0.5.0" }
+grammers-session = { path = "src/libs/grammers-session", version = "0.5.1" }
+grammers-tl-types = { path = "src/libs/grammers-tl-types", version =  "0.5.1", features = [
     "tl-mtproto",
 ] }
 

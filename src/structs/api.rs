@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use crate::bot::telegram::TelegramBot;
+use crate::bot::telegram_user::TelegramUser;
 use crate::utils::JsonConfigs;
 
 
@@ -11,7 +11,8 @@ pub type UserHandlers = HashMap<String, BotHandler>;
 #[derive(PartialEq)]
 pub enum ChannelData {
     Message(ReceivedMessage),
-    Handler(UserHandler)
+    Handler(UserHandler),
+    PinnedMessage()
 }
 
 #[derive(PartialEq)]
@@ -22,14 +23,14 @@ pub struct UserHandler {
 
 #[derive(Clone)]
 pub struct AppData {
-    pub(crate) bot: TelegramBot,
+    pub(crate) bot: TelegramUser,
     pub(crate) tx: tokio::sync::mpsc::Sender<ChannelData>
 }
 
 #[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BotButtons {
-    title: String,
-    reply: String
+    pub title: String,
+    pub reply: String
 }
 
 #[derive(Clone, PartialEq)]
@@ -65,6 +66,7 @@ pub struct SendMessageRequest {
     pub messenger: String,
     pub user: String,
     pub message: String,
+    pub access_hash: Option<i64>,
     pub buttons: Option<Vec<BotButtons>>,
     pub handlers: Option<BotHandler>
 }
