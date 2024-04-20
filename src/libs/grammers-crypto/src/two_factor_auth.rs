@@ -13,7 +13,7 @@ use sha2::Sha512;
 // H(data) := sha256(data)
 use crate::sha256 as h;
 
-/// Prepare the password for sending to telegram_user for verification.
+/// Prepare the password for sending to telegram for verification.
 /// The method returns M1 and g_a parameters that should be sent to Telegram
 /// (without the raw password).
 ///

@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = { version = "1.0.115" }
+async-trait = "0.1.80"
 
 grammers-client = { path = "src/libs/grammers-client", version = "0.5.0" }
 grammers-crypto = { path = "src/libs/grammers-crypto", version = "0.6.0" }

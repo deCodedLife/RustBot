@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use crate::bot::telegram_user::TelegramUser;
+use crate::bot::{DocaBot};
 use crate::utils::JsonConfigs;
 
 
@@ -17,14 +17,15 @@ pub enum ChannelData {
 
 #[derive(PartialEq)]
 pub struct UserHandler {
-    pub(crate) user: String,
+    pub(crate) bot: String,
+    pub(crate) user: UserData,
     pub(crate) handler: BotHandler
 }
 
-#[derive(Clone)]
+
 pub struct AppData {
-    pub(crate) bot: TelegramUser,
-    pub(crate) tx: tokio::sync::mpsc::Sender<ChannelData>
+    pub tx: tokio::sync::mpsc::Sender<ChannelData>,
+    pub bots: HashMap<String, Box<dyn DocaBot>>,
 }
 
 #[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -36,7 +37,8 @@ pub struct BotButtons {
 #[derive(Clone, PartialEq)]
 pub struct  ReceivedMessage {
     pub user: String,
-    pub message: String
+    pub message: String,
+    pub bot: String
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -62,9 +64,15 @@ pub struct AddContactRequest {
 }
 
 #[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct UserData {
+    pub phone: String,
+    pub messenger_id: Option<String>
+}
+
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SendMessageRequest {
     pub messenger: String,
-    pub user: String,
+    pub user: UserData,
     pub message: String,
     pub access_hash: Option<i64>,
     pub buttons: Option<Vec<BotButtons>>,

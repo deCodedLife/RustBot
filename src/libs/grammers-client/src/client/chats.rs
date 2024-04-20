@@ -753,10 +753,10 @@ impl Client {
         let host = url_parse.host_str().unwrap();
         let hosts = [
             "t.me",
-            "telegram_user.me",
-            "telegram_user.dog",
+            "telegram.me",
+            "telegram.dog",
             "tg.dev",
-            "telegram_user.me",
+            "telegram.me",
             "telesco.pe",
         ];
 

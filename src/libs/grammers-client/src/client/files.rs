@@ -251,7 +251,7 @@ impl Client {
                     if offset > size {
                         break;
                     }
-                    // Fetch from telegram_user
+                    // Fetch from telegram
                     let request = &tl::functions::upload::GetFile {
                         precise: true,
                         cdn_supported: false,

@@ -21,7 +21,7 @@ fn bot_data_write() {
     let mut bot_data: bot::BotAuth = bot::BotAuth::default();
     bot_data.app_id = APP_ID;
     bot_data.app_hash = APP_HASH;
-    bot_data.into_file("configs/app_configs.json").unwrap()
+    bot_data.into_file("configs/telegram.json").unwrap()
 
 
 }

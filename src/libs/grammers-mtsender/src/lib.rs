@@ -582,7 +582,7 @@ impl<T: Transport, M: Mtp> Sender<T, M> {
                         ),
                         Err(_) => {
                             warn!(
-                                "telegram_user sent updates that failed to be deserialized: {}",
+                                "telegram sent updates that failed to be deserialized: {}",
                                 e
                             );
                             None
