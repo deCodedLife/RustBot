@@ -7,6 +7,7 @@ use grammers_mtsender::InvocationError;
 use grammers_session::PackedChat;
 use grammers_tl_types::{Serializable};
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use crate::bot::telegram::{TelegramAuth};
 use crate::bot::whatsapp::{WhatsappAuth};
 use crate::structs::*;
@@ -38,6 +39,9 @@ pub struct BotContact {
 pub trait DocaBot: Send + Sync {
     fn get_bot_name(self) -> String;
     fn add_handler(&mut self, user: UserData, handler: BotHandler);
+    fn start_dialog(&mut self, user: AddContactRequest) -> Value {
+        Value::Null
+    }
     async fn sign_in(&self, data: auth::AuthData) -> utils::Result<()>;
     async fn sign_out(&self);
     async fn send_message(&self, data: SendMessageRequest) -> utils::Result<()>;

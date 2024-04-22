@@ -56,8 +56,9 @@ pub enum BotRequestType {
     RequestMessage(SendMessageRequest)
 }
 
-#[derive(Default, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AddContactRequest {
+    pub messenger: String,
     pub first_name: String,
     pub last_name: String,
     pub phone: String

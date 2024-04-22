@@ -91,8 +91,9 @@ async fn async_main() -> std::io::Result<()> {
         App::new()
             .app_data(web::Data::new(app_data))
             .service(api::send_message)
+            .service(api::add_contact)
     })
-        .bind(("0.0.0.0", 1052))?
+        .bind(("127.0.0.1", 1052))?
         .run()
         .await
 }

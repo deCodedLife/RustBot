@@ -40,19 +40,18 @@ async fn send_message(request: web::Json<SendMessageRequest>, app_data: web::Dat
 
 #[post("add_contact")]
 async fn add_contact(request: web::Json<AddContactRequest>, app_data: web::Data<AppData>) -> impl Responder {
-    // let request_ref = request.0.clone();
-    // let mut bot_statuses = json!({});
-    // for (bot_name, bot) in app_data.bots.iter() {
-    //     if request_ref.messenger != "*" && bot_name != &request_ref.messenger {
-    //         continue;
-    //     }
-    //     bot_statuses[bot_name] = match bot.add_contact(request.0.clone()).await {
-    //         Ok(_) => json!({ "status": 200 }),
-    //         Err(e) => json!({ "status": 500, "details": e.to_string() })
-    //     };
-    // }
-    // HttpResponse::Ok()
-    //     .content_type(ContentType::json())
-    //     .body(bot_statuses.to_string())
-    "Done"
+    let request_ref = request.0.clone();
+    let mut bot_statuses = json!({});
+    for (bot_name, bot) in app_data.bots.iter() {
+        if request_ref.messenger != "*" && bot_name != &request.messenger {
+            continue;
+        }
+        bot_statuses[bot_name] = match bot.add_contact(request.0.clone()).await {
+            Ok(user) => json!({ "id": user.to_string() }),
+            Err(e) => json!({ "status": 500, "details": e.to_string() })
+        };
+    }
+    HttpResponse::Ok()
+        .content_type(ContentType::json())
+        .body(bot_statuses.to_string())
 }

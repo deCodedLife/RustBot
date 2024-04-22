@@ -1,4 +1,7 @@
+use std::io;
+use std::io::{BufRead, Write};
 use std::pin::pin;
+use actix_web::cookie::time::util;
 use async_trait::async_trait;
 use futures_util::future::{Either, select};
 use grammers_client::{Client, Config, InputMessage, SignInError, Update};
@@ -7,6 +10,7 @@ use grammers_session::{PackedChat, PackedType, Session};
 use grammers_tl_types::enums::{InputContact};
 use grammers_tl_types::types::{InputPhoneContact};
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 
 use crate::bot::{BotAuth, BotChat, BotContact, DocaBot};
 use crate::structs::auth::AuthData;
@@ -26,6 +30,20 @@ impl JsonConfigs for TelegramAuth {}
 pub struct Telegram {
     pub client: Client,
     pub handlers: UserHandlers,
+}
+
+fn prompt(message: &str) -> utils::Result<String> {
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
+    stdout.write_all(message.as_bytes())?;
+    stdout.flush()?;
+
+    let stdin = io::stdin();
+    let mut stdin = stdin.lock();
+
+    let mut line = String::new();
+    stdin.read_line(&mut line)?;
+    Ok(line)
 }
 
 impl Telegram {
@@ -107,7 +125,9 @@ impl DocaBot for Telegram {
         if self.client.is_authorized().await? { return Ok(()); }
         println!("Signing in...");
         let token = self.client.request_login_code(&data.username).await?;
-        let signed_in = self.client.sign_in(&token, &data.verify_code).await;
+
+        let code = prompt("Code: ").unwrap();
+        let signed_in = self.client.sign_in(&token, &code).await;
         match signed_in {
             Err(SignInError::PasswordRequired(password_token)) => {
                 self.client
@@ -168,6 +188,22 @@ impl DocaBot for Telegram {
                 Ok(0)
             }
         }
+    }
+
+    fn start_dialog(&mut self, user: AddContactRequest) -> Value {
+        // let _user_id = self.add_contact(user).await;
+        // if _user_id.is_err() {
+        //     Value::Null
+        // }
+        // let user_id = _user_id.unwrap();
+        // if user_id == 0 {
+        //     Value::Null
+        // }
+        // self.client.invoke(grammers_tl_types::functions::messages::CreateChat{
+        //
+        // })
+
+        json!({})
     }
 
     async fn get_updates(&self) -> Result<Option<Update>, InvocationError> {
