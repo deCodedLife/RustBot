@@ -154,6 +154,9 @@ impl DocaBot for Telegram {
     }
     async fn send_message(&self, data: SendMessageRequest) -> utils::Result<()> {
         let message = InputMessage::from(data.message.as_str());
+        if data.user.messenger_id.is_none() {
+            return Ok(());
+        }
         let chat_id = data.user.messenger_id.unwrap().parse::<i64>().unwrap();
         self.client.send_message(PackedChat {
             id: chat_id,
