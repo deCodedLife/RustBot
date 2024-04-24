@@ -20,7 +20,7 @@ use tokio::runtime;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-const SESSION_FILE: &str = "dialogs.session";
+const SESSION_FILE: &str = "community_telegram.session";
 
 fn prompt(message: &str) -> Result<String> {
     let stdout = io::stdout();

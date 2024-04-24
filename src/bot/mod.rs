@@ -42,7 +42,7 @@ pub trait DocaBot: Send + Sync {
     fn start_dialog(&mut self, user: AddContactRequest) -> Value {
         Value::Null
     }
-    async fn sign_in(&self, data: auth::AuthData) -> utils::Result<()>;
+    async fn sign_in(&self, bot_name: String, data: auth::AuthData) -> utils::Result<()>;
     async fn sign_out(&self);
     async fn send_message(&self, data: SendMessageRequest) -> utils::Result<()>;
     async fn add_contact(&self, data: AddContactRequest) -> utils::Result<i64>;

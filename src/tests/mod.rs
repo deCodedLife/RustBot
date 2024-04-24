@@ -12,7 +12,7 @@ fn auth_data_write() {
     user_data.username = USERNAME;
     user_data.password = PASSWORD;
     user_data.verify_code = "".to_string();
-    user_data.into_file("configs/user_config.json").unwrap();
+    user_data.into_file("configs/auth_data.json").unwrap();
 }
 
 #[test]

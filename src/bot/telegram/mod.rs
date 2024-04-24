@@ -14,11 +14,11 @@ use serde_json::{json, Value};
 
 use crate::bot::{BotAuth, BotChat, BotContact, DocaBot};
 use crate::structs::auth::AuthData;
-use crate::{SESSION_FILE, utils};
+use crate::{SESSION_FILE, SESSION_FOLDER, utils};
 use crate::structs::api::{AddContactRequest, SendMessageRequest, BotHandler, UserHandlers, ChannelData, ReceivedMessage, UserData};
 use crate::utils::JsonConfigs;
 
-#[derive(PartialEq, Default, Serialize, Deserialize)]
+#[derive(PartialEq, Clone, Default, Serialize, Deserialize)]
 pub struct TelegramAuth {
     pub app_id: i32,
     pub app_hash: String,
@@ -67,10 +67,7 @@ impl Telegram {
         Ok(dialogs_list)
     }
 
-    // TODO Add contact on message send
-    // TODO Create chat after adding contact
-
-    pub async fn new(cfg: BotAuth) -> Self {
+    pub async fn new(bot_name: String, cfg: BotAuth) -> Self {
         println!("Connecting to Telegram...");
         let auth = match cfg {
             BotAuth::TelegramAuth(data) => data,
@@ -80,7 +77,8 @@ impl Telegram {
             }
         };
         let api_id = auth.app_id;
-        let session = Session::load_file_or_create(SESSION_FILE).unwrap();
+        let session_file = format!("configs/{}/{}.session", SESSION_FOLDER, bot_name);
+        let session = Session::load_file_or_create(session_file).unwrap();
         let client = Client::connect(Config {
             session,
             api_id,
@@ -121,24 +119,26 @@ impl DocaBot for Telegram {
         Ok(())
     }
 
-    async fn sign_in(&self, data: AuthData) -> utils::Result<()> {
+    async fn sign_in(&self, bot_name: String, data: AuthData) -> utils::Result<()> {
         if self.client.is_authorized().await? { return Ok(()); }
+        let AuthData::Telegram(auth_data) = data else { return Ok(()) };
         println!("Signing in...");
-        let token = self.client.request_login_code(&data.username).await?;
+        let token = self.client.request_login_code(&auth_data.username).await?;
 
         let code = prompt("Code: ").unwrap();
         let signed_in = self.client.sign_in(&token, &code).await;
         match signed_in {
             Err(SignInError::PasswordRequired(password_token)) => {
                 self.client
-                    .check_password(password_token, data.password.trim())
+                    .check_password(password_token, auth_data.password.trim())
                     .await?;
             }
             Ok(_) => (),
             Err(e) => panic!("{}", e),
         };
         println!("Signed in!");
-        match self.client.session().save_to_file(SESSION_FILE) {
+        let session_file = format!("configs/{}/{}.session", SESSION_FOLDER, bot_name);
+        match self.client.session().save_to_file(session_file) {
             Ok(_) => {}
             Err(e) => {
                 println!(
@@ -180,6 +180,9 @@ impl DocaBot for Telegram {
             contacts: test_import
         }).await {
             Ok(grammers_tl_types::enums::contacts::ImportedContacts::Contacts(data)) => {
+                if data.imported.first().is_none() {
+                    return Ok(0)
+                }
                 let imported_contact = data.imported.first().unwrap();
                 match imported_contact {
                     grammers_tl_types::enums::ImportedContact::Contact(data) => Ok(data.user_id),

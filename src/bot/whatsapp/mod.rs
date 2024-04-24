@@ -33,7 +33,7 @@ impl DocaBot for WhatsApp {
         todo!()
     }
 
-    async fn sign_in(&self, data: AuthData) -> crate::utils::Result<()> {
+    async fn sign_in(&self, bot_name: String, data: AuthData) -> crate::utils::Result<()> {
         todo!()
     }
 

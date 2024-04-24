@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::fmt::format;
+use std::fs;
 use std::future::IntoFuture;
 use std::hash::Hash;
 use std::ops::Deref;
@@ -12,6 +14,7 @@ use crate::bot::telegram::{Telegram, TelegramAuth};
 use crate::bot::whatsapp::{WhatsApp, WhatsappAuth};
 use crate::structs::*;
 use crate::structs::api::{AppData, ChannelData};
+use crate::structs::auth::{AuthData, AuthList};
 use crate::utils::JsonConfigs;
 
 pub mod structs;
@@ -22,8 +25,8 @@ mod bot;
 mod utils;
 mod api;
 
-const SESSION_FILE: &str = "dialogs.session";
-
+const SESSION_FILE: &str = "community_telegram.session";
+const SESSION_FOLDER: &str = "sessions";
 
 async fn handle_messages(mut bot: HashMap<String, Box<dyn DocaBot>>, mut bot_rx: Receiver<ChannelData>) -> utils::Result<()> {
     loop {
@@ -56,29 +59,46 @@ async fn handle_messages(mut bot: HashMap<String, Box<dyn DocaBot>>, mut bot_rx:
 //     Ok(())
 // }
 
+fn get_configs(file_name: &str) -> AuthList {
+    if fs::metadata(file_name).is_err() {
+        println!("[!] {} not found", file_name);
+        return AuthList::default();
+    }
+    let file_contents: String = fs::read_to_string(file_name).unwrap();
+    serde_json::from_str::<AuthList>(&file_contents.clone()).unwrap_or_else(|e| {
+        println!("[!] Config file is corrupted: {:?}", e);
+        AuthList::default()
+    })
+}
+
 async fn async_main() -> std::io::Result<()> {
-    let bot_config = TelegramAuth::from_file("configs/telegram.json");
-    // let bot_config2 = WhatsappAuth::from_file("configs/whatsapp.json");
 
-    let user_data = auth::AuthData::from_file("configs/user_config.json");
-    let telegram = Telegram::new(BotAuth::TelegramAuth(bot_config)).await;
-    telegram.sign_in(user_data).await.unwrap();
-
-    // let whatsapp = WhatsApp::new(BotAuth::WhatsappAuth(bot_config2)).await;
+    if fs::metadata(format!("configs/{}", SESSION_FOLDER)).is_err() {
+        fs::create_dir_all(format!("configs/{}", SESSION_FOLDER)).unwrap();
+    }
 
     let mut bot_list: HashMap<String, Box<dyn DocaBot>> = HashMap::new();
-    bot_list.insert(String::from("telegram"), Box::new(telegram.clone()));
-
     let (bot_tx, mut bot_rx) = tokio::sync::mpsc::channel::<ChannelData>(1024);
-    let test = bot_tx.clone();
-    let bot = telegram.clone();
+
+    let app_data  = TelegramAuth::from_file("configs/telegram.json");
+    // let bot_config2 = WhatsappAuth::from_file("configs/whatsapp.json");
+
+    for ( bot_name, auth_data ) in get_configs("configs/auth_data.json").iter() {
+
+      let bot = Telegram::new(bot_name.clone(), BotAuth::TelegramAuth(app_data.clone())).await;
+      bot.sign_in(bot_name.clone(), AuthData::Telegram(auth_data.clone())).await.unwrap();
+      bot_list.insert(bot_name.clone(), Box::new(bot.clone()));
+
+    };
+
     actix_rt::spawn(handle_messages(bot_list.clone(), bot_rx).into_future());
 
     for (_, bot_instance) in bot_list.clone() {
         let bot_clone = bot_instance.clone();
         let tx_clone = bot_tx.clone();
         actix_rt::spawn(async move{
-            bot_clone.message_handler(tx_clone)
+            bot_clone
+                .message_handler(tx_clone)
                 .await
         });
     }
