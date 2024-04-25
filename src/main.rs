@@ -93,12 +93,12 @@ async fn async_main() -> std::io::Result<()> {
 
     actix_rt::spawn(handle_messages(bot_list.clone(), bot_rx).into_future());
 
-    for (_, bot_instance) in bot_list.clone() {
+    for (bot_name, bot_instance) in bot_list.clone() {
         let bot_clone = bot_instance.clone();
         let tx_clone = bot_tx.clone();
         actix_rt::spawn(async move{
             bot_clone
-                .message_handler(tx_clone)
+                .message_handler(bot_name.clone(), tx_clone)
                 .await
         });
     }

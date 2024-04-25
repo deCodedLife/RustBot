@@ -8,6 +8,7 @@ use grammers_client::{Client, Config, InputMessage, SignInError, Update};
 use grammers_mtsender::InvocationError;
 use grammers_session::{PackedChat, PackedType, Session};
 use grammers_tl_types::enums::{InputContact};
+use grammers_tl_types::enums::contacts::Contacts::Contacts;
 use grammers_tl_types::types::{InputPhoneContact};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -166,6 +167,25 @@ impl DocaBot for Telegram {
         Ok(())
     }
 
+    async fn delete_contacts(&self) {
+        let response = self.client.invoke(&grammers_tl_types::functions::contacts::GetContacts{
+            hash: 0
+        }).await.unwrap();
+        let mut delete_users: Vec<grammers_tl_types::enums::InputUser> = Vec::new();
+        let grammers_tl_types::enums::contacts::Contacts::Contacts(contacts) = response else { return; };
+        for user_data in contacts.users.iter() {
+            let grammers_tl_types::enums::User::User(user) = user_data else { continue };
+            let user_to_delete = grammers_tl_types::types::InputUser {
+                user_id: user.id,
+                access_hash: user.access_hash.unwrap(),
+            };
+            delete_users.push(grammers_tl_types::enums::InputUser::User(user_to_delete));
+        }
+        self.client.invoke(&grammers_tl_types::functions::contacts::DeleteContacts{
+            id: delete_users
+        }).await.unwrap();
+    }
+
     async fn add_contact(&self, data: AddContactRequest) -> utils::Result<i64> {
         let mut test_import = Vec::new();
         test_import.push(InputContact::InputPhoneContact(
@@ -216,7 +236,7 @@ impl DocaBot for Telegram {
         Ok(self.client.next_update().await?)
     }
 
-    async fn message_handler(&self, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()> {
+    async fn message_handler(&self, bot_name: String, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()> {
         loop {
             let update = {
                 let exit = pin!(async { tokio::signal::ctrl_c().await });
@@ -261,7 +281,7 @@ impl DocaBot for Telegram {
                         PackedType::User => {
                             let chat = Option::from(PackedChat::from(message.chat()));
                             let data = ReceivedMessage {
-                                bot: String::from("telegram"),
+                                bot: bot_name.clone(),
                                 user: chat.unwrap().id.to_string(),
                                 message: String::from(message.text()),
                             };

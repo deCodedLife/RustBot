@@ -53,7 +53,7 @@ impl DocaBot for WhatsApp {
         todo!()
     }
 
-    async fn message_handler(&self, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()> {
+    async fn message_handler(&self, bot_name: String, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()> {
         todo!()
     }
 
@@ -62,6 +62,10 @@ impl DocaBot for WhatsApp {
     }
 
     async fn handle_message(&self, user: String, message: String) -> crate::utils::Result<()> {
+        todo!()
+    }
+
+    async fn delete_contacts(&self) {
         todo!()
     }
 
