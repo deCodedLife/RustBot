@@ -61,7 +61,7 @@ impl DocaBot for WhatsApp {
         String::from("whatsapp")
     }
 
-    async fn handle_message(&self, user: String, message: String) -> crate::utils::Result<()> {
+    async fn handle_message(&mut self, user: String, message: String) -> crate::utils::Result<()> {
         todo!()
     }
 

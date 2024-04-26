@@ -41,7 +41,7 @@ async fn handle_messages(mut bot: HashMap<String, Box<dyn DocaBot>>, mut bot_rx:
                 } );
             },
             ChannelData::Message(data) => {
-                let bot_instance = bot.get(&data.bot);
+                let mut bot_instance = bot.get_mut(&data.bot);
                 if bot_instance.is_none() {
                     continue;
                 }

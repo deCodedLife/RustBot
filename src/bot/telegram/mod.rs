@@ -102,12 +102,13 @@ impl DocaBot for Telegram {
         self.handlers.insert(user.messenger_id.unwrap(), handler);
     }
 
-    async fn handle_message(&self, user: String, message: String) -> utils::Result<()> {
+    async fn handle_message(&mut self, user: String, message: String) -> utils::Result<()> {
         let handlers = self.handlers.get(&user);
         if handlers.is_none() {
             return Ok(());
         }
-        let handler = handlers.unwrap().get(&message);
+        let handlers_clone = handlers.clone();
+        let handler = handlers_clone.unwrap().get(&message);
         if handler.is_none() {
             return Ok(());
         }
@@ -117,6 +118,7 @@ impl DocaBot for Telegram {
             .body(serde_json::to_string(request).unwrap())
             .send()
             .await.unwrap();
+        self.handlers.remove(&user);
         Ok(())
     }
 
