@@ -128,7 +128,8 @@ impl DocaBot for Telegram {
         println!("Signing in...");
         let token = self.client.request_login_code(&auth_data.username).await?;
 
-        let code = prompt("Code: ").unwrap();
+        let prompt_text = format!( "{} Code: ", bot_name );
+        let code = prompt( &prompt_text ).unwrap();
         let signed_in = self.client.sign_in(&token, &code).await;
         match signed_in {
             Err(SignInError::PasswordRequired(password_token)) => {
