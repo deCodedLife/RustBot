@@ -44,6 +44,13 @@ async fn handle_messages(mut bot: HashMap<String, Box<dyn DocaBot>>, mut bot_rx:
                     te.add_handler(data.user, data.handler)
                 } );
             },
+            ChannelData::SendMessage(data) => {
+                let mut bot_instance = bot.get_mut(&data.messenger);
+                if bot_instance.is_none() {
+                    continue;
+                }
+                bot_instance.unwrap().send_message(data).await?;
+            },
             ChannelData::ReceiveMessage(data) => {
                 let mut bot_instance = bot.get_mut(&data.ctx.bot_name);
                 if bot_instance.is_none() {
