@@ -28,6 +28,7 @@ impl JsonConfigs for TelegramAuth {}
 #[derive(Clone)]
 pub struct Telegram {
     pub client: Client,
+    pub bot_id: i64,
     pub handlers: UserHandlers,
 }
 
@@ -84,8 +85,10 @@ impl Telegram {
             api_hash: auth.app_hash.clone(),
             params: Default::default(),
         }).await.unwrap();
+        let bot_id = client.get_me().await.unwrap().id();
         Telegram {
             client,
+            bot_id,
             handlers: Default::default(),
         }
     }
@@ -209,9 +212,13 @@ impl DocaBot for Telegram {
                     match message.chat().pack().ty {
                         PackedType::User => {
                             let chat = Option::from(PackedChat::from(message.chat()));
+                            let user = chat.unwrap().id.to_string();
+                            if user == self.bot_id.to_string() {
+                                continue
+                            }
                             let data = ReceivedMessage {
                                 ctx: ctx.clone(),
-                                user: chat.unwrap().id.to_string(),
+                                user: user.clone(),
                                 message: String::from(message.text()),
                             };
                             tx.send(ChannelData::ReceiveMessage(data)).await?;
