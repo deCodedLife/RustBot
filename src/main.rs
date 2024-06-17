@@ -13,7 +13,7 @@ use crate::bot::{BotAuth, DocaBot};
 use crate::bot::telegram::{Telegram, TelegramAuth};
 use crate::bot::whatsapp::{WhatsApp, WhatsappAuth};
 use crate::structs::*;
-use crate::structs::api::{AppData, ChannelData};
+use crate::structs::api::{AppData, BotContext, ChannelData};
 use crate::structs::auth::{AuthData, AuthList};
 use crate::utils::JsonConfigs;
 
@@ -28,6 +28,10 @@ mod api;
 const SESSION_FILE: &str = "community_telegram.session";
 const SESSION_FOLDER: &str = "sessions";
 
+
+
+
+
 async fn handle_messages(mut bot: HashMap<String, Box<dyn DocaBot>>, mut bot_rx: Receiver<ChannelData>) -> utils::Result<()> {
     loop {
         let data = bot_rx.recv().await;
@@ -40,12 +44,12 @@ async fn handle_messages(mut bot: HashMap<String, Box<dyn DocaBot>>, mut bot_rx:
                     te.add_handler(data.user, data.handler)
                 } );
             },
-            ChannelData::Message(data) => {
-                let mut bot_instance = bot.get_mut(&data.bot);
+            ChannelData::ReceiveMessage(data) => {
+                let mut bot_instance = bot.get_mut(&data.ctx.bot_name);
                 if bot_instance.is_none() {
                     continue;
                 }
-                bot_instance.unwrap().handle_message(data.user, data.message).await?;
+                bot_instance.unwrap().handle_message(data.user, data.ctx, data.message).await?;
             }
             _ => {}
         };
@@ -78,27 +82,35 @@ async fn async_main() -> std::io::Result<()> {
     }
 
     let mut bot_list: HashMap<String, Box<dyn DocaBot>> = HashMap::new();
+    let mut bot_ctxs: HashMap<String, Box<BotContext>> = HashMap::new();
+
     let (bot_tx, mut bot_rx) = tokio::sync::mpsc::channel::<ChannelData>(1024);
 
     let app_data  = TelegramAuth::from_file("configs/telegram.json");
     // let bot_config2 = WhatsappAuth::from_file("configs/whatsapp.json");
 
     for ( bot_name, auth_data ) in get_configs("configs/auth_data.json").iter() {
-
-      let bot = Telegram::new(bot_name.clone(), BotAuth::TelegramAuth(app_data.clone())).await;
-      bot.sign_in(bot_name.clone(), AuthData::Telegram(auth_data.clone())).await.unwrap();
-      bot_list.insert(bot_name.clone(), Box::new(bot.clone()));
-
+        let bot = Telegram::new(bot_name.clone(), BotAuth::TelegramAuth(app_data.clone())).await;
+        bot.sign_in(bot_name.clone(), AuthData::Telegram(auth_data.clone())).await.unwrap();
+        bot_list.insert(bot_name.clone(), Box::new(bot.clone()));
+        bot_ctxs.insert(bot_name.clone(), Box::new(BotContext{
+            bot_name: bot_name.clone(),
+            api_url: auth_data.api_url.clone()
+        }));
     };
 
     actix_rt::spawn(handle_messages(bot_list.clone(), bot_rx).into_future());
 
     for (bot_name, bot_instance) in bot_list.clone() {
+        let bot_ctx = bot_ctxs.clone().get(&bot_name).unwrap().clone();
         let bot_clone = bot_instance.clone();
         let tx_clone = bot_tx.clone();
         actix_rt::spawn(async move{
             bot_clone
-                .message_handler(bot_name.clone(), tx_clone)
+                .message_handler(BotContext{
+                    bot_name: bot_ctx.bot_name.clone(),
+                    api_url: bot_ctx.api_url.clone()
+                }, tx_clone)
                 .await
         });
     }

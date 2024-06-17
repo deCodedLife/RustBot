@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 use crate::bot::telegram::{TelegramAuth};
 use crate::bot::whatsapp::{WhatsappAuth};
 use crate::structs::*;
-use crate::structs::api::{AddContactRequest, BotHandler, ChannelData, SendMessageRequest, UserData};
+use crate::structs::api::{AddContactRequest, BotContext, BotHandler, ChannelData, SendMessageRequest, UserData};
 use crate::utils;
 use crate::utils::JsonConfigs;
 
@@ -47,8 +47,8 @@ pub trait DocaBot: Send + Sync {
     async fn send_message(&self, data: SendMessageRequest) -> utils::Result<()>;
     async fn add_contact(&self, data: AddContactRequest) -> utils::Result<i64>;
     async fn get_updates(&self) -> Result<Option<Update>, InvocationError>;
-    async fn message_handler(&self, bot_name: String, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()>;
-    async fn handle_message(&mut self, user: String, message: String) -> utils::Result<()>;
+    async fn message_handler(&self, bot_ctx: BotContext, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()>;
+    async fn handle_message(&mut self, user: String, ctx: BotContext, message: String) -> utils::Result<()>;
     async fn delete_contacts(&self);
     fn clone_boxed(&self) -> Box<dyn DocaBot>;
 }

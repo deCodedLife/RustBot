@@ -3,7 +3,7 @@ use grammers_mtsender::InvocationError;
 use serde::{Deserialize, Serialize};
 use grammers_client::Update;
 use crate::bot::{BotAuth, DocaBot};
-use crate::structs::api::{AddContactRequest, BotHandler, ChannelData, SendMessageRequest, UserData};
+use crate::structs::api::{AddContactRequest, BotContext, BotHandler, ChannelData, SendMessageRequest, UserData};
 use crate::structs::auth::AuthData;
 use crate::utils;
 use crate::utils::JsonConfigs;
@@ -29,11 +29,15 @@ impl WhatsApp {
 
 #[async_trait]
 impl DocaBot for WhatsApp {
+    fn get_bot_name(self) -> String {
+        String::from("whatsapp")
+    }
+
     fn add_handler(&mut self, user: UserData, handler: BotHandler) {
         todo!()
     }
 
-    async fn sign_in(&self, bot_name: String, data: AuthData) -> crate::utils::Result<()> {
+    async fn sign_in(&self, bot_name: String, data: AuthData) -> utils::Result<()> {
         todo!()
     }
 
@@ -41,11 +45,11 @@ impl DocaBot for WhatsApp {
         todo!()
     }
 
-    async fn send_message(&self, data: SendMessageRequest) -> crate::utils::Result<()> {
+    async fn send_message(&self, data: SendMessageRequest) -> utils::Result<()> {
         todo!()
     }
 
-    async fn add_contact(&self, data: AddContactRequest) -> crate::utils::Result<i64> {
+    async fn add_contact(&self, data: AddContactRequest) -> utils::Result<i64> {
         todo!()
     }
 
@@ -53,15 +57,11 @@ impl DocaBot for WhatsApp {
         todo!()
     }
 
-    async fn message_handler(&self, bot_name: String, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()> {
+    async fn message_handler(&self, bot_ctx: BotContext, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()> {
         todo!()
     }
 
-    fn get_bot_name(self) -> String {
-        String::from("whatsapp")
-    }
-
-    async fn handle_message(&mut self, user: String, message: String) -> crate::utils::Result<()> {
+    async fn handle_message(&mut self, user: String, ctx: BotContext, message: String) -> utils::Result<()> {
         todo!()
     }
 

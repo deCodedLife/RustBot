@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use crate::bot::{DocaBot};
+use crate::structs::auth::TelegramAuth;
 use crate::utils::JsonConfigs;
 
 
@@ -10,7 +11,8 @@ pub type UserHandlers = HashMap<String, BotHandler>;
 
 #[derive(PartialEq)]
 pub enum ChannelData {
-    Message(ReceivedMessage),
+    ReceiveMessage(ReceivedMessage),
+    SendMessage(SendMessageRequest),
     Handler(UserHandler),
     PinnedMessage()
 }
@@ -35,10 +37,16 @@ pub struct BotButtons {
 }
 
 #[derive(Clone, PartialEq)]
+pub struct BotContext {
+    pub bot_name: String,
+    pub api_url: String
+}
+
+#[derive(Clone, PartialEq)]
 pub struct  ReceivedMessage {
     pub user: String,
     pub message: String,
-    pub bot: String
+    pub ctx: BotContext
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

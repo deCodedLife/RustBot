@@ -17,21 +17,8 @@ async fn send_message(request: web::Json<SendMessageRequest>, app_data: web::Dat
         if request_ref.messenger != "*" && bot_name != &request_ref.messenger {
             continue;
         }
-        match request.0.handlers.clone() {
-            Some(data) => {
-                let handler = UserHandler {
-                    bot: request.messenger.clone(),
-                    user: request.user.clone(),
-                    handler: data,
-                };
-                app_data.tx.send(ChannelData::Handler(handler)).await.unwrap()
-            }
-            _ => {}
-        };
-        bot_statuses[bot_name] = match bot.send_message(request.0.clone()).await {
-            Ok(_) => json!({ "status": 200 }),
-            Err(e) => json!({ "status": 500, "details": e.to_string() })
-        };
+        app_data.tx.send(ChannelData::SendMessage(request.0.clone())).await.unwrap();
+        bot_statuses[bot_name] = json!({ "status": 200 });
     }
     HttpResponse::Ok()
         .content_type(ContentType::json())

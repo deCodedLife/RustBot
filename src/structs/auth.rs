@@ -6,7 +6,7 @@ use std::collections::HashMap;
 pub struct TelegramAuth {
     pub(crate) username: String,
     pub(crate) password: String,
-    pub(crate) verify_code: String
+    pub(crate) api_url: String
 }
 
 
