@@ -232,7 +232,7 @@ impl DocaBot for Telegram {
     }
 
     async fn handle_message(&mut self, user: String, ctx: BotContext, message: String) -> utils::Result<()> {
-        if !message.contains("1") {
+        if message != "1" {
             return Ok(());
         }
         let request = json!({
