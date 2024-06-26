@@ -1,10 +1,13 @@
 use std::io;
 use std::io::{BufRead, Write};
+use std::ops::ControlFlow;
 use std::pin::pin;
+use std::thread::sleep;
+use std::time::Duration;
 use async_trait::async_trait;
 use futures_util::future::{Either, select};
-use grammers_client::{Client, Config, InputMessage, SignInError, Update};
-use grammers_mtsender::InvocationError;
+use grammers_client::{Client, Config, InitParams, InputMessage, SignInError, Update};
+use grammers_mtsender::{InvocationError, ReconnectionPolicy};
 use grammers_session::{PackedChat, PackedType, Session};
 use grammers_tl_types::enums::{InputContact};
 use grammers_tl_types::types::{InputPhoneContact};
@@ -24,6 +27,25 @@ pub struct TelegramAuth {
 }
 
 impl JsonConfigs for TelegramAuth {}
+
+
+struct MyPolicy;
+
+impl ReconnectionPolicy for MyPolicy {
+    ///this is the only function you need to implement,
+    /// it gives you the attempted reconnections, and `self` in case you have any data in your struct.
+    /// you should return a [`ControlFlow`] which can be either `Break` or `Continue`, break will **NOT** attempt a reconnection,
+    /// `Continue` **WILL** try to reconnect after the given **Duration**.
+    ///
+    /// in this example we are simply sleeping exponentially based on the attempted count,
+    /// however this is not a really good practice for production since we are just doing 2 raised to the power of attempts and that will result to massive
+    /// numbers very soon, just an example!
+    fn should_retry(&self, attempts: usize) -> ControlFlow<(), Duration> {
+        let duration = u64::pow(2, attempts as _);
+        ControlFlow::Continue(Duration::from_millis(duration))
+    }
+}
+
 
 #[derive(Clone)]
 pub struct Telegram {
@@ -83,7 +105,10 @@ impl Telegram {
             session,
             api_id,
             api_hash: auth.app_hash.clone(),
-            params: Default::default(),
+            params: InitParams {
+                reconnection_policy: &MyPolicy,
+                ..Default::default()
+            },
         }).await.unwrap();
         let bot_id = client.get_me().await.unwrap().id();
         Telegram {
@@ -192,41 +217,45 @@ impl DocaBot for Telegram {
 
     async fn message_handler(&self, ctx: BotContext, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()> {
         loop {
-            let update = {
-                let exit = pin!(async { tokio::signal::ctrl_c().await });
-                let upd = pin!(async { self.get_updates().await });
-                match select(exit, upd).await {
-                    Either::Left(_) => None,
-                    Either::Right((u, _)) => Some(u),
-                }
-            };
-            let update = match update {
-                None | Some(Ok(None)) => continue,
-                Some(u) => match u {
-                    Ok(update) => update,
-                    Err(_) => continue
-                },
-            }.unwrap();
-            match update {
-                Update::NewMessage(message) if !message.outgoing() => {
-                    match message.chat().pack().ty {
-                        PackedType::User => {
-                            let chat = Option::from(PackedChat::from(message.chat()));
-                            let user = chat.unwrap().id.to_string();
-                            if user == self.bot_id.to_string() {
-                                continue
+            // let update = {
+            //     let exit = pin!(async { tokio::signal::ctrl_c().await });
+            //     let upd = pin!(async { self.get_updates().await });
+            //     match select(exit, upd).await {
+            //         Either::Left(_) => None,
+            //         Either::Right((u, _)) => Some(u),
+            //     }
+            // };
+            // let update = match update {
+            //     None | Some(Ok(None)) => continue,
+            //     Some(u) => match u {
+            //         Ok(update) => update,
+            //         Err(_) => continue
+            //     },
+            // }.unwrap();
+            use grammers_client::Update;
+
+            while let Some(update) = self.client.next_update().await? {
+                match update {
+                    Update::NewMessage(message) if !message.outgoing() => {
+                        match message.chat().pack().ty {
+                            PackedType::User => {
+                                let chat = Option::from(PackedChat::from(message.chat()));
+                                let user = chat.unwrap().id.to_string();
+                                if user == self.bot_id.to_string() {
+                                    continue
+                                }
+                                let data = ReceivedMessage {
+                                    ctx: ctx.clone(),
+                                    user: user.clone(),
+                                    message: String::from(message.text()),
+                                };
+                                tx.send(ChannelData::ReceiveMessage(data)).await?;
                             }
-                            let data = ReceivedMessage {
-                                ctx: ctx.clone(),
-                                user: user.clone(),
-                                message: String::from(message.text()),
-                            };
-                            tx.send(ChannelData::ReceiveMessage(data)).await?;
+                            _ => {}
                         }
-                        _ => {}
                     }
+                    _ => {}
                 }
-                _ => {}
             }
         }
     }
