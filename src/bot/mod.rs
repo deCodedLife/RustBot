@@ -1,6 +1,7 @@
 pub mod telegram;
 pub mod whatsapp;
 
+use std::collections::HashMap;
 use async_trait::async_trait;
 use grammers_client::Update;
 use grammers_mtsender::InvocationError;
@@ -11,7 +12,7 @@ use serde_json::{json, Value};
 use crate::bot::telegram::{TelegramAuth};
 use crate::bot::whatsapp::{WhatsappAuth};
 use crate::structs::*;
-use crate::structs::api::{AddContactRequest, BotContext, BotHandler, ChannelData, SendMessageRequest, UserData};
+use crate::structs::api::{AddContactRequest, BotContext, BotHandler, ChannelData, SendMessageRequest, TelegramMessage, UserData};
 use crate::utils;
 use crate::utils::JsonConfigs;
 
@@ -22,7 +23,9 @@ pub enum BotAuth {
     WhatsappAuth(WhatsappAuth),
 }
 
-#[derive(Debug)]
+type MessagesMap = HashMap<String, TelegramMessage>;
+
+#[derive(Debug, Clone)]
 pub struct BotChat {
     pub chat_id: Option<i64>,
     pub title: Option<String>,
@@ -42,11 +45,13 @@ pub trait DocaBot: Send + Sync {
     fn start_dialog(&mut self, user: AddContactRequest) -> Value {
         Value::Null
     }
-    async fn sign_in(&self, bot_name: String, data: auth::AuthData) -> utils::Result<()>;
+    async fn sign_in(&mut self, bot_name: String, data: auth::AuthData) -> utils::Result<()>;
     async fn sign_out(&self);
     async fn send_message(&self, data: SendMessageRequest) -> utils::Result<()>;
     async fn add_contact(&self, data: AddContactRequest) -> utils::Result<i64>;
+    async fn get_dialogs(&self) -> utils::Result<crate::bot::MessagesMap>;
     async fn get_updates(&self) -> Result<Option<Update>, InvocationError>;
+    async fn custom_handler(&mut self, bot_ctx: BotContext, tx: tokio::sync::mpsc::Sender<ChannelData>);
     async fn message_handler(&self, bot_ctx: BotContext, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()>;
     async fn handle_message(&mut self, user: String, ctx: BotContext, message: String) -> utils::Result<()>;
     async fn delete_contacts(&self);

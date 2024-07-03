@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use grammers_session::PackedChat;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use crate::bot::{DocaBot};
@@ -11,7 +12,7 @@ pub type UserHandlers = HashMap<String, BotHandler>;
 
 #[derive(PartialEq)]
 pub enum ChannelData {
-    ReceiveMessage(ReceivedMessage),
+    ReceiveMessage(BotMessage),
     SendMessage(SendMessageRequest),
     Handler(UserHandler),
     PinnedMessage()
@@ -43,10 +44,17 @@ pub struct BotContext {
 }
 
 #[derive(Clone, PartialEq)]
-pub struct  ReceivedMessage {
+pub struct BotMessage {
+    pub ctx: BotContext,
+    pub message: TelegramMessage
+}
+
+#[derive(Clone, PartialEq)]
+pub struct TelegramMessage {
+    pub id: i32,
+    pub ctx: PackedChat,
     pub user: String,
-    pub message: String,
-    pub ctx: BotContext
+    pub text: String
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

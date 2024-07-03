@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use grammers_mtsender::InvocationError;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc::Sender;
 use grammers_client::Update;
-use crate::bot::{BotAuth, DocaBot};
+use crate::bot::{BotAuth, DocaBot, MessagesMap};
 use crate::structs::api::{AddContactRequest, BotContext, BotHandler, ChannelData, SendMessageRequest, UserData};
 use crate::structs::auth::AuthData;
 use crate::utils;
@@ -37,7 +38,7 @@ impl DocaBot for WhatsApp {
         todo!()
     }
 
-    async fn sign_in(&self, bot_name: String, data: AuthData) -> utils::Result<()> {
+    async fn sign_in(&mut self, bot_name: String, data: AuthData) -> utils::Result<()> {
         todo!()
     }
 
@@ -53,7 +54,15 @@ impl DocaBot for WhatsApp {
         todo!()
     }
 
+    async fn get_dialogs(&self) -> utils::Result<MessagesMap> {
+        todo!()
+    }
+
     async fn get_updates(&self) -> Result<Option<Update>, InvocationError> {
+        todo!()
+    }
+
+    async fn custom_handler(&mut self, bot_ctx: BotContext, tx: Sender<ChannelData>) {
         todo!()
     }
 

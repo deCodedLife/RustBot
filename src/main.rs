@@ -56,7 +56,10 @@ async fn handle_messages(mut bot: HashMap<String, Box<dyn DocaBot>>, mut bot_rx:
                 if bot_instance.is_none() {
                     continue;
                 }
-                bot_instance.unwrap().handle_message(data.user, data.ctx, data.message).await?;
+                bot_instance.unwrap().handle_message(
+                    data.message.user.clone(),
+                    data.ctx.clone(),
+                    data.message.text.clone()).await?;
             }
             _ => {}
         };
@@ -97,8 +100,9 @@ async fn async_main() -> std::io::Result<()> {
     // let bot_config2 = WhatsappAuth::from_file("configs/whatsapp.json");
 
     for ( bot_name, auth_data ) in get_configs("configs/auth_data.json").iter() {
-        let bot = Telegram::new(bot_name.clone(), BotAuth::TelegramAuth(app_data.clone())).await;
+        let mut bot = Telegram::new(bot_name.clone(), BotAuth::TelegramAuth(app_data.clone())).await;
         bot.sign_in(bot_name.clone(), AuthData::Telegram(auth_data.clone())).await.unwrap();
+        bot.dialogs = bot.get_dialogs().await.unwrap();
         bot_list.insert(bot_name.clone(), Box::new(bot.clone()));
         bot_ctxs.insert(bot_name.clone(), Box::new(BotContext{
             bot_name: bot_name.clone(),
@@ -110,11 +114,11 @@ async fn async_main() -> std::io::Result<()> {
 
     for (bot_name, bot_instance) in bot_list.clone() {
         let bot_ctx = bot_ctxs.clone().get(&bot_name).unwrap().clone();
-        let bot_clone = bot_instance.clone();
+        let mut bot_clone = bot_instance.clone();
         let tx_clone = bot_tx.clone();
         actix_rt::spawn(async move{
             bot_clone
-                .message_handler(BotContext{
+                .custom_handler(BotContext{
                     bot_name: bot_ctx.bot_name.clone(),
                     api_url: bot_ctx.api_url.clone()
                 }, tx_clone)
