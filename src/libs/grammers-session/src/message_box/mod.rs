@@ -377,7 +377,8 @@ impl MessageBox {
                 self.try_begin_get_diff(Entry::AccountWide);
                 Err(Gap)
             } else {
-                info!("received an update referencing an unknown peer, but cannot find out who");
+                // info!("received an update referencing an unknown peer, but cannot find out who");
+                // println!("{:?}", updates);
                 Ok(())
             }
         }
