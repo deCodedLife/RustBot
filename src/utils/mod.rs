@@ -1,6 +1,6 @@
 use std::fs;
-use std::fs::File;
-use std::io::Write;
+// use std::fs::File;
+// use std::io::Write;
 use serde::{Deserialize, Serialize};
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -18,10 +18,10 @@ pub trait JsonConfigs: Default + Serialize + for<'a> Deserialize<'a> {
             Self::default()
         })
     }
-    fn into_file(&self, filename: &str) -> Result<()> {
-        let mut file = File::create(filename).expect("[!] Can't create config file");
-        let data = serde_json::to_string(self).unwrap();
-        file.write_all(data.as_bytes()).unwrap();
-        Ok(())
-    }
+    // fn into_file(&self, filename: &str) -> Result<()> {
+    //     let mut file = File::create(filename).expect("[!] Can't create config file");
+    //     let data = serde_json::to_string(self).unwrap();
+    //     file.write_all(data.as_bytes()).unwrap();
+    //     Ok(())
+    // }
 }

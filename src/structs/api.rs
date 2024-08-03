@@ -2,21 +2,14 @@ use std::collections::HashMap;
 use grammers_session::PackedChat;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use crate::bot::{DocaBot};
-use crate::structs::auth::TelegramAuth;
+use crate::structs::wrapper::ChannelTx;
+#[cfg(test)]
 use crate::utils::JsonConfigs;
-
 
 pub type BotHandler = HashMap<String, ApiRequest>;
 pub type UserHandlers = HashMap<String, BotHandler>;
 
-#[derive(PartialEq)]
-pub enum ChannelData {
-    ReceiveMessage(BotMessage),
-    SendMessage(SendMessageRequest),
-    Handler(UserHandler),
-    PinnedMessage()
-}
+
 
 #[derive(PartialEq)]
 pub struct UserHandler {
@@ -27,8 +20,7 @@ pub struct UserHandler {
 
 
 pub struct AppData {
-    pub tx: tokio::sync::mpsc::Sender<ChannelData>,
-    pub bots: HashMap<String, Box<dyn DocaBot>>,
+    pub tx: tokio::sync::mpsc::Sender<ChannelTx>,
 }
 
 #[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -41,12 +33,6 @@ pub struct BotButtons {
 pub struct BotContext {
     pub bot_name: String,
     pub api_url: String
-}
-
-#[derive(Clone, PartialEq)]
-pub struct BotMessage {
-    pub ctx: BotContext,
-    pub message: TelegramMessage
 }
 
 #[derive(Clone, PartialEq)]
@@ -75,6 +61,7 @@ pub enum BotRequestType {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AddContactRequest {
     pub messenger: String,
+    pub api_id: String,
     pub first_name: String,
     pub last_name: String,
     pub phone: String

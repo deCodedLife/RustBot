@@ -3,19 +3,15 @@ pub mod whatsapp;
 
 use std::collections::HashMap;
 use async_trait::async_trait;
-use grammers_client::Update;
-use grammers_mtsender::InvocationError;
-use grammers_session::PackedChat;
-use grammers_tl_types::{Serializable};
+// use grammers_session::PackedChat;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use tokio::sync::mpsc::Sender;
 use crate::bot::telegram::{TelegramAuth};
 use crate::bot::whatsapp::{WhatsappAuth};
 use crate::structs::*;
-use crate::structs::api::{AddContactRequest, BotContext, BotHandler, ChannelData, SendMessageRequest, TelegramMessage, UserData};
+use crate::structs::api::{AddContactRequest, BotHandler, SendMessageRequest, TelegramMessage, UserData};
+use crate::structs::wrapper::ChannelTx;
 use crate::utils;
-use crate::utils::JsonConfigs;
-
 
 #[derive(PartialEq, Serialize, Deserialize)]
 pub enum BotAuth {
@@ -25,12 +21,12 @@ pub enum BotAuth {
 
 type MessagesMap = HashMap<String, TelegramMessage>;
 
-#[derive(Debug, Clone)]
-pub struct BotChat {
-    pub chat_id: Option<i64>,
-    pub title: Option<String>,
-    pub tg_chat: Option<PackedChat>,
-}
+// #[derive(Debug, Clone)]
+// pub struct BotChat {
+//     pub chat_id: Option<i64>,
+//     pub title: Option<String>,
+//     pub tg_chat: Option<PackedChat>,
+// }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BotContact {
@@ -41,20 +37,20 @@ pub struct BotContact {
 #[async_trait]
 pub trait DocaBot: Send + Sync {
     fn get_bot_name(self) -> String;
-    fn add_handler(&mut self, user: UserData, handler: BotHandler);
-    fn start_dialog(&mut self, user: AddContactRequest) -> Value {
-        Value::Null
-    }
+    fn add_handler(&mut self, user: UserData, handler: BotHandler) -> utils::Result<()>;
     async fn sign_in(&mut self, bot_name: String, data: auth::AuthData) -> utils::Result<()>;
     async fn sign_out(&self);
     async fn send_message(&self, data: SendMessageRequest) -> utils::Result<()>;
-    async fn add_contact(&self, data: AddContactRequest) -> utils::Result<i64>;
+    async fn add_contact(&self, data: AddContactRequest) -> utils::Result<()>;
     async fn get_dialogs(&self) -> utils::Result<crate::bot::MessagesMap>;
-    async fn get_updates(&self) -> Result<Option<Update>, InvocationError>;
-    async fn custom_handler(&mut self, bot_ctx: BotContext, tx: tokio::sync::mpsc::Sender<ChannelData>);
-    async fn message_handler(&self, bot_ctx: BotContext, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()>;
-    async fn handle_message(&mut self, user: String, ctx: BotContext, message: String) -> utils::Result<()>;
+
+    async fn update_profile_status(&self);
+    // async fn custom_handler(&mut self, bot_ctx: BotContext, tx: tokio::sync::mpsc::Sender<ChannelData>);
+    async fn message_handler(&self, tx: Sender<ChannelTx>);
+    async fn handle_message(&self, user: String, message: String) -> utils::Result<()>;
     async fn delete_contacts(&self);
+
+    fn start_handle(self, tx: Sender<ChannelTx>);
     fn clone_boxed(&self) -> Box<dyn DocaBot>;
 }
 

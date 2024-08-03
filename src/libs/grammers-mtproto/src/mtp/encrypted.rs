@@ -301,7 +301,7 @@ impl Encrypted {
             // Request to Destroy Session
             tl::types::DestroySessionOk::CONSTRUCTOR_ID
             | tl::types::DestroySessionNone::CONSTRUCTOR_ID => self.handle_destroy_session(message),
-            // New Session Creation Notification
+            // new Session Creation Notification
             tl::types::NewSessionCreated::CONSTRUCTOR_ID => {
                 self.handle_new_session_created(message)
             }
@@ -896,7 +896,7 @@ impl Encrypted {
         Ok(())
     }
 
-    /// **[New Session Creation Notification]**
+    /// **[new Session Creation Notification]**
     ///
     /// The server notifies the client that a new session (from the server's
     /// standpoint) had to be created to handle a client message. If, after
@@ -927,7 +927,7 @@ impl Encrypted {
     /// created" notification will be generated. The client is expected to
     /// handle such situations gracefully.
     ///
-    /// [New Session Creation Notification]: https://core.telegram.org/mtproto/service_messages#new-session-creation-notification
+    /// [new Session Creation Notification]: https://core.telegram.org/mtproto/service_messages#new-session-creation-notification
     fn handle_new_session_created(
         &mut self,
         message: manual_tl::Message,

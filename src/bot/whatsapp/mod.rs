@@ -1,10 +1,9 @@
 use async_trait::async_trait;
-use grammers_mtsender::InvocationError;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
-use grammers_client::Update;
-use crate::bot::{BotAuth, DocaBot, MessagesMap};
-use crate::structs::api::{AddContactRequest, BotContext, BotHandler, ChannelData, SendMessageRequest, UserData};
+use crate::bot::{DocaBot, MessagesMap};
+use crate::structs::api::{AddContactRequest, BotHandler, SendMessageRequest, UserData};
+use crate::structs::wrapper::{ChannelTx};
 use crate::structs::auth::AuthData;
 use crate::utils;
 use crate::utils::JsonConfigs;
@@ -23,9 +22,9 @@ pub struct WhatsApp {
 }
 
 impl WhatsApp {
-    pub async fn new(cfg: BotAuth) -> Self {
-        todo!()
-    }
+    // pub async fn new(_: BotAuth) -> Self {
+    //     todo!()
+    // }
 }
 
 #[async_trait]
@@ -34,11 +33,11 @@ impl DocaBot for WhatsApp {
         String::from("whatsapp")
     }
 
-    fn add_handler(&mut self, user: UserData, handler: BotHandler) {
+    fn add_handler(&mut self, _: UserData, _: BotHandler) -> utils::Result<()> {
         todo!()
     }
 
-    async fn sign_in(&mut self, bot_name: String, data: AuthData) -> utils::Result<()> {
+    async fn sign_in(&mut self, _: String, _: AuthData) -> utils::Result<()> {
         todo!()
     }
 
@@ -46,11 +45,11 @@ impl DocaBot for WhatsApp {
         todo!()
     }
 
-    async fn send_message(&self, data: SendMessageRequest) -> utils::Result<()> {
+    async fn send_message(&self, _: SendMessageRequest) -> utils::Result<()> {
         todo!()
     }
 
-    async fn add_contact(&self, data: AddContactRequest) -> utils::Result<i64> {
+    async fn add_contact(&self, _: AddContactRequest) -> utils::Result<()> {
         todo!()
     }
 
@@ -58,23 +57,27 @@ impl DocaBot for WhatsApp {
         todo!()
     }
 
-    async fn get_updates(&self) -> Result<Option<Update>, InvocationError> {
+    // async fn custom_handler(&mut self, bot_ctx: BotContext, tx: Sender<ChannelData>) {
+    //     todo!()
+    // }
+
+    async fn update_profile_status(&self) {
         todo!()
     }
 
-    async fn custom_handler(&mut self, bot_ctx: BotContext, tx: Sender<ChannelData>) {
+    async fn message_handler(&self, _: Sender<ChannelTx>) {
         todo!()
     }
 
-    async fn message_handler(&self, bot_ctx: BotContext, tx: tokio::sync::mpsc::Sender<ChannelData>) -> utils::Result<()> {
-        todo!()
-    }
-
-    async fn handle_message(&mut self, user: String, ctx: BotContext, message: String) -> utils::Result<()> {
+    async fn handle_message(&self, _: String, _: String) -> utils::Result<()> {
         todo!()
     }
 
     async fn delete_contacts(&self) {
+        todo!()
+    }
+
+    fn start_handle(self, _: Sender<ChannelTx>) {
         todo!()
     }
 

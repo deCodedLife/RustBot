@@ -169,6 +169,79 @@ impl Client {
         }
     }
 
+
+    pub async fn get_updates_m(&self) -> Result<Option<Update>, InvocationError> {
+        let (deadline, get_diff, get_channel_diff) = {
+            let state = &mut *self.0.state.write().unwrap();
+            if let Some(updates) = state.updates.pop_front() {
+                return Ok(Some(updates));
+            }
+            (
+                state.message_box.check_deadlines(), // first, as it might trigger differences
+                state.message_box.get_difference(),
+                state.message_box.get_channel_difference(&state.chat_hashes),
+            )
+        };
+
+        if let Some(request) = get_diff {
+            let response = self.invoke(&request).await?;
+            let (updates, users, chats) = {
+                let state = &mut *self.0.state.write().unwrap();
+                state
+                    .message_box
+                    .apply_difference(response, &mut state.chat_hashes)
+            };
+            self.extend_update_queue(updates, ChatMap::new(users, chats));
+            return Ok(None);
+        }
+
+        if let Some(request) = get_channel_diff {
+            let maybe_response = self.invoke(&request).await;
+
+            let response = match maybe_response {
+                Ok(r) => r,
+                Err(e) if e.is("PERSISTENT_TIMESTAMP_OUTDATED") => {
+                    return Ok(None);
+                }
+                Err(e) if e.is("CHANNEL_PRIVATE") => {
+                    return Ok(None);
+                }
+                Err(InvocationError::Rpc(rpc_error)) if rpc_error.code == 500 => {
+                    return Ok(None);
+                }
+                Err(e) => return Err(e),
+            };
+
+            let (updates, users, chats) = {
+                let state = &mut *self.0.state.write().unwrap();
+                state.message_box.apply_channel_difference(
+                    request,
+                    response,
+                    &mut state.chat_hashes,
+                )
+            };
+
+            self.extend_update_queue(updates, ChatMap::new(users, chats));
+            return Ok(None);
+        }
+
+        let step = {
+            let sleep = pin!(async { sleep_until(deadline.into()).await });
+            let step = pin!(async { self.step().await });
+
+            match select(sleep, step).await {
+                Either::Left(_) => None,
+                Either::Right((step, _)) => Some(step),
+            }
+        };
+
+        if let Some(step) = step {
+            step?;
+        }
+
+        return Ok(None);
+    }
+
     pub(crate) fn process_socket_updates(&self, all_updates: Vec<tl::enums::Updates>) {
         if all_updates.is_empty() {
             return;
