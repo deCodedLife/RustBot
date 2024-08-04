@@ -212,12 +212,13 @@ impl DocaBot for Telegram {
                 let imported_contact = data.imported.first().unwrap();
                 match imported_contact {
                     grammers_tl_types::enums::ImportedContact::Contact(data) => {
+                        let client_id = new_contact.api_id.parse::<i32>().unwrap();
                         let request = json!({
                             "object": "clients",
                             "command": "update",
                             "data": {
-                                "id": new_contact.api_id,
-                                "telegram_id": data.user_id
+                                "id": client_id,
+                                "messenger_id": data.user_id
                             }
                         });
                         let _ = reqwest::Client::new()
